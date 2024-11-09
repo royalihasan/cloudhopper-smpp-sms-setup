@@ -1,6 +1,5 @@
 package org.alpha.clients;
 
-
 import com.cloudhopper.commons.charset.CharsetUtil;
 import com.cloudhopper.commons.util.windowing.WindowFuture;
 import com.cloudhopper.smpp.SmppConstants;
@@ -9,90 +8,71 @@ import com.cloudhopper.smpp.SmppBindType;
 import com.cloudhopper.smpp.SmppSession;
 import com.cloudhopper.smpp.impl.DefaultSmppClient;
 import com.cloudhopper.smpp.impl.DefaultSmppSessionHandler;
+import com.cloudhopper.smpp.pdu.*;
 import com.cloudhopper.smpp.type.Address;
-import com.cloudhopper.smpp.pdu.EnquireLink;
-import com.cloudhopper.smpp.pdu.EnquireLinkResp;
-import com.cloudhopper.smpp.pdu.PduRequest;
-import com.cloudhopper.smpp.pdu.PduResponse;
-import com.cloudhopper.smpp.pdu.SubmitSm;
-import com.cloudhopper.smpp.pdu.SubmitSmResp;
+import org.alpha.utils.PropertiesLoader;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class SmppClient {
+
+    // Logger instance for logging events and errors
     private static final Logger logger = LoggerFactory.getLogger(SmppClient.class);
 
-    static public void main(String[] args) throws Exception {
+    public static void main(String[] args) throws Exception {
 
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        // Executor service for managing concurrent tasks using lightweight virtual threads
+        ExecutorService executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
 
-        // to enable automatic expiration of requests, a second scheduled executor
-        // is required which is what a monitor task will be executed with - this
-        // is probably a thread pool that can be shared with between all client bootstraps
-        ScheduledThreadPoolExecutor monitorExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(1, new ThreadFactory() {
-            private AtomicInteger sequence = new AtomicInteger(0);
+        // ScheduledExecutorService for handling tasks with a delay (monitoring tasks)
+        ScheduledExecutorService monitorExecutor = Executors.newSingleThreadScheduledExecutor();
 
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r);
-                t.setName("SmppClientSessionWindowMonitorPool-" + sequence.getAndIncrement());
-                return t;
-            }
-        });
+        // Creating an instance of the SmppClient with configured executors
+        DefaultSmppClient clientBootstrap = new DefaultSmppClient(executor, 1, monitorExecutor);
 
-
-        DefaultSmppClient clientBootstrap = new DefaultSmppClient(Executors.newCachedThreadPool(), 1, monitorExecutor);
-
-        //
-        // setup configuration for a client session
-        //
+        // Creating a custom session handler to process the SMPP messages
         DefaultSmppSessionHandler sessionHandler = new ClientSmppSessionHandler();
+        // set properties_ config file name
+        PropertiesLoader.init("application.properties");
+        // Setting up the configuration for the SMPP session
+        SmppSessionConfiguration config = new SmppSessionConfiguration();
+        config.setWindowSize(1);  // Window size (how many requests to send before expecting a response)
+        config.setName("client.alpha.000");  // Client name for identification
+        config.setType(SmppBindType.TRANSCEIVER);  // Set the bind type (transceiver)
+        config.setHost(PropertiesLoader.properties.clientHost);  // SMPP server host
+        config.setPort(PropertiesLoader.properties.clientPort);  // SMPP server port
+        config.setConnectTimeout(PropertiesLoader.properties.clientConnectTimeout);  // Connection timeout
+        config.setSystemId(PropertiesLoader.properties.clientSystemId);  // System ID for authentication
+        config.setPassword(PropertiesLoader.properties.clientPassword);  // Password for authentication
+        config.getLoggingOptions().setLogBytes(true);  // Enable byte logging for debugging
+        config.setRequestExpiryTimeout(PropertiesLoader.properties.clientRequestExpiryTimeout);  // Request expiry timeout
+        config.setWindowMonitorInterval(PropertiesLoader.properties.clientWindowMonitorInterval);  // Window monitoring interval
+        config.setCountersEnabled(true);  // Enable counters for tracking message statistics
 
-        SmppSessionConfiguration config0 = new SmppSessionConfiguration();
-        config0.setWindowSize(1);
-        config0.setName("Tester.Session.0");
-        config0.setType(SmppBindType.TRANSCEIVER);
-        config0.setHost("127.0.0.1");
-        config0.setPort(2776);
-        config0.setConnectTimeout(10000);
-        config0.setSystemId("1234567890");
-        config0.setPassword("password");
-        config0.getLoggingOptions().setLogBytes(true);
-        // to enable monitoring (request expiration)
-        config0.setRequestExpiryTimeout(30000);
-        config0.setWindowMonitorInterval(15000);
-        config0.setCountersEnabled(true);
-
-        //
-        // create session, enquire link, submit an sms, close session
-        //
         SmppSession session0 = null;
 
         try {
-            // create session a session by having the bootstrap connect a
-            // socket, send the bind request, and wait for a bind response
-            session0 = clientBootstrap.bind(config0, sessionHandler);
+            // Establishing the SMPP session by binding the client to the server
+            session0 = clientBootstrap.bind(config, sessionHandler);
 
+            // Waiting for user input to send the first enquireLink message
             System.out.println("Press any key to send enquireLink #1");
             System.in.read();
 
-            // demo of a "synchronous" enquireLink call - send it and wait for a response
+            // Synchronous enquireLink request - sends a request and waits for a response
             EnquireLinkResp enquireLinkResp1 = session0.enquireLink(new EnquireLink(), 10000);
             logger.info("enquire_link_resp #1: commandStatus [" + enquireLinkResp1.getCommandStatus() + "=" + enquireLinkResp1.getResultMessage() + "]");
 
+            // Waiting for user input to send the second enquireLink message
             System.out.println("Press any key to send enquireLink #2");
             System.in.read();
 
-            // demo of an "asynchronous" enquireLink call - send it, get a future,
-            // and then optionally choose to pick when we wait for it
+            // Asynchronous enquireLink request - sends the request and waits asynchronously for a response
             WindowFuture<Integer, PduRequest, PduResponse> future0 = session0.sendRequestPdu(new EnquireLink(), 10000, true);
             if (!future0.await()) {
                 logger.error("Failed to receive enquire_link_resp within specified time");
@@ -103,37 +83,43 @@ public class SmppClient {
                 logger.error("Failed to properly receive enquire_link_resp: " + future0.getCause());
             }
 
+            // Waiting for user input to send the first submitSM message
             System.out.println("Press any key to send submit #1");
             System.in.read();
 
-            String text160 = "\u20AC Hello , World";
-            byte[] textBytes = CharsetUtil.encode(text160, CharsetUtil.CHARSET_UTF_8);
+            // Sample text message to be sent
+            String text160 = "Hello , world";
+            byte[] textBytes = CharsetUtil.encode(text160, CharsetUtil.CHARSET_UTF_8);  // Encoding the message to bytes
 
             SubmitSm submit0 = new SubmitSm();
+            submit0.setRegisteredDelivery(SmppConstants.REGISTERED_DELIVERY_SMSC_RECEIPT_REQUESTED);  // Request a delivery receipt
 
-            // add delivery receipt
-            submit0.setRegisteredDelivery(SmppConstants.REGISTERED_DELIVERY_SMSC_RECEIPT_REQUESTED);
-
+            // Setting source and destination address for the SMS
             submit0.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, "40404"));
             submit0.setDestAddress(new Address((byte) 0x01, (byte) 0x01, "44555519205"));
-            submit0.setShortMessage(textBytes);
+            submit0.setShortMessage(textBytes);  // Adding the message bytes
 
+            // Sending the SubmitSm message (SMS submission request)
             SubmitSmResp submitResp = session0.submit(submit0, 10000);
 
-
+            // Logging the size of the send window
             logger.info("sendWindow.size: {}", session0.getSendWindow().getSize());
 
+            // Waiting for user input to unbind the session
             System.out.println("Press any key to unbind and close sessions");
             System.in.read();
 
+            // Unbinding the session and closing it
             session0.unbind(5000);
         } catch (Exception e) {
-            logger.error("", e);
+            logger.error("Error occurred", e);
         }
 
+        // Cleaning up the session and logging final statistics if the session exists
         if (session0 != null) {
             logger.info("Cleaning up session... (final counters)");
             if (session0.hasCounters()) {
+                // Logging the transaction counters for various message types
                 logger.info("tx-enquireLink: {}", session0.getCounters().getTxEnquireLink());
                 logger.info("tx-submitSM: {}", session0.getCounters().getTxSubmitSM());
                 logger.info("tx-deliverSM: {}", session0.getCounters().getTxDeliverSM());
@@ -144,45 +130,55 @@ public class SmppClient {
                 logger.info("rx-dataSM: {}", session0.getCounters().getRxDataSM());
             }
 
+            // Destroying the session after use
             session0.destroy();
-            // alternatively, could call close(), get outstanding requests from
-            // the sendWindow (if we wanted to retry them later), then call shutdown()
         }
 
-        // this is required to not causing server to hang from non-daemon threads
-        // this also makes sure all open Channels are closed to I *think*
+        // Shutting down client bootstrap and executor services
         logger.info("Shutting down client bootstrap and executors...");
         clientBootstrap.destroy();
-        executor.shutdownNow();
-        monitorExecutor.shutdownNow();
+        executor.shutdown();
+        monitorExecutor.shutdown();
 
         logger.info("Done. Exiting");
     }
 
     /**
-     * Could either implement SmppSessionHandler or only override select methods
-     * by extending a DefaultSmppSessionHandler.
+     * Custom session handler to process received and expired PDU requests.
      */
     public static class ClientSmppSessionHandler extends DefaultSmppSessionHandler {
 
         public ClientSmppSessionHandler() {
-            super(logger);
+            super(logger);  // Passing the logger to the parent class
         }
 
         @Override
         public void firePduRequestExpired(PduRequest pduRequest) {
+            // This method is invoked when a PDU request has expired
             logger.warn("PDU request expired: {}", pduRequest);
         }
 
         @Override
         public PduResponse firePduRequestReceived(PduRequest pduRequest) {
-            PduResponse response = pduRequest.createResponse();
+            // This method is invoked when a PDU request is received
+            PduResponse response = pduRequest.createResponse();  // Creating a response for the PDU request
 
-            // do any logic here
+            try {
+                if (pduRequest instanceof DeliverSm deliverSm) {
+                    // If the PDU request is a DeliverSm (SMS delivery), decode and log the message
+                    byte[] shortMessage = deliverSm.getShortMessage();
+                    String messageContent = CharsetUtil.decode(shortMessage, CharsetUtil.CHARSET_ISO_8859_1);
+                    System.out.println("========================================");
+                    System.out.println("Received message from server: " + messageContent);
+                    System.out.println("========================================");
+                    logger.info("Received message from server: {}", messageContent);
+                }
+            } catch (Exception e) {
+                // Handle any errors during the processing of the received PDU
+                logger.error("Error processing received PDU", e);
+            }
 
-            return response;
+            return response;  // Returning the response for the PDU request
         }
-
     }
-
 }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Define the root logger to set the log level and appenders -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!-- Define the Console appender to log to the terminal -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} - %level - %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- You can configure specific loggers for different classes -->
+    <logger name="org.alpha.server" level="DEBUG">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <!-- Optionally configure the logger for Cloudhopper SMPP -->
+    <logger name="com.cloudhopper" level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+</configuration>
