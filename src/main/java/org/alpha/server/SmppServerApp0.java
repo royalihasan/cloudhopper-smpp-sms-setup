@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.Executors;
 
-public class SmppServerApp {
-    private static final Logger logger = LoggerFactory.getLogger(SmppServerApp.class);
+public class SmppServerApp0 {
+    private static final Logger logger = LoggerFactory.getLogger(SmppServerApp0.class);
 
     /**
      * The main method to start the SMPP server and handle its lifecycle.
@@ -33,7 +33,7 @@ public class SmppServerApp {
 
         // Configure SMPP server
         SmppServerConfiguration configuration = new SmppServerConfiguration();
-        PropertiesLoader.init("application.properties");
+        PropertiesLoader.init("application0.properties");
         // Setting up various SMPP server parameters
         configuration.setPort(PropertiesLoader.properties.port);  // Port to listen on
         configuration.setMaxConnectionSize(PropertiesLoader.properties.maxConnectionSize);  // Max concurrent connections
@@ -49,7 +49,7 @@ public class SmppServerApp {
         DefaultSmppServer smppServer = new DefaultSmppServer(configuration, new DefaultSmppServerHandler(), executor);
 
         // Start the SMPP server and log the event
-        logger.info("Starting SMPP server...");
+        logger.info("Starting SMPP server-0 ... on port " + PropertiesLoader.properties.port);
         smppServer.start();
         logger.info("SMPP server started");
 
@@ -156,11 +156,11 @@ public class SmppServerApp {
                         DeliverSm deliver = new DeliverSm();
                         deliver.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, "40404"));
                         deliver.setDestAddress(new Address((byte) 0x01, (byte) 0x01, "44555519205"));
-                        deliver.setShortMessage(CharsetUtil.encode("Bye , World", CharsetUtil.CHARSET_ISO_8859_1));
+                        deliver.setShortMessage(CharsetUtil.encode("Server-0: Bye , World", CharsetUtil.CHARSET_ISO_8859_1));
 
                         // Send the response PDU to the client
                         session.sendRequestPdu(deliver, 10000, false);
-                        logger.info("Response sent to client: Bye , World");
+                        logger.info("Server-0: Response sent to client: Bye , World");
                     } catch (Exception e) {
                         logger.error("Error sending response to client", e);
                     }

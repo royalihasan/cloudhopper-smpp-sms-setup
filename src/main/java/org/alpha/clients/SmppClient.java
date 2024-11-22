@@ -38,7 +38,7 @@ public class SmppClient {
         // Creating a custom session handler to process the SMPP messages
         DefaultSmppSessionHandler sessionHandler = new ClientSmppSessionHandler();
         // set properties_ config file name
-        PropertiesLoader.init("application.properties");
+        PropertiesLoader.init("application0.properties");
         // Setting up the configuration for the SMPP session
         SmppSessionConfiguration config = new SmppSessionConfiguration();
         config.setWindowSize(1);  // Window size (how many requests to send before expecting a response)

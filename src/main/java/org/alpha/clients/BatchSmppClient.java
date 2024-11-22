@@ -64,7 +64,7 @@ public class BatchSmppClient {
 
     private static SmppSessionConfiguration createSessionConfig() {
         // Initialize properties loader with configuration file
-        PropertiesLoader.init("application.properties");
+        PropertiesLoader.init("application0.properties");
 
         // Set up SMPP session configuration
         SmppSessionConfiguration config = new SmppSessionConfiguration();

@@ -6,7 +6,7 @@ import java.util.Properties;
 
 public class PropertiesLoader {
     private static Properties properties;
-    private static String propertiesFile = "application.properties"; // default value
+    private static String propertiesFile = "application0.properties"; // default value
 
     /**
      * Initialize the properties loader with a specific properties file
