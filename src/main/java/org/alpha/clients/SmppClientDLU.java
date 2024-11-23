@@ -39,7 +39,7 @@ public class SmppClientDLU {
         config.setName("client.alpha.000");
         config.setType(SmppBindType.TRANSCEIVER);
         config.setHost(PropertiesLoader.properties.clientHost);
-        config.setPort(PropertiesLoader.properties.clientPort);
+        config.setPort(2776);
         config.setConnectTimeout(PropertiesLoader.properties.clientConnectTimeout);
         config.setSystemId(PropertiesLoader.properties.clientSystemId);
         config.setPassword(PropertiesLoader.properties.clientPassword);

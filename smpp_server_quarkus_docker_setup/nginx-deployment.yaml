@@ -1,0 +1,30 @@
+# nginx-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-lb
+  labels:
+    app: nginx-lb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-lb
+  template:
+    metadata:
+      labels:
+        app: nginx-lb
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 2775  # SMPP Load Balancer Port
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config

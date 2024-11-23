@@ -1,0 +1,14 @@
+# nginx-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-lb-service
+spec:
+  selector:
+    app: nginx-lb
+  ports:
+    - name: smpp
+      protocol: TCP
+      port: 2775
+      targetPort: 2775
+  type: NodePort

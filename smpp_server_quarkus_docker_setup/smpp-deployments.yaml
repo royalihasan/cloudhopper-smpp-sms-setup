@@ -1,0 +1,88 @@
+# smpp-deployments.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smpp-server-1
+  labels:
+    app: smpp-server-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smpp-server-1
+  template:
+    metadata:
+      labels:
+        app: smpp-server-1
+    spec:
+      containers:
+        - name: smpp-server-1
+          image: quarkus/smpp_server:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 2775
+              name: smpp
+          env:
+            - name: smpp.server.name
+              value: "SMPP_SERVER_1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smpp-server-2
+  labels:
+    app: smpp-server-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smpp-server-2
+  template:
+    metadata:
+      labels:
+        app: smpp-server-2
+    spec:
+      containers:
+        - name: smpp-server-2
+          image: quarkus/smpp_server:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 2775
+              name: smpp
+          env:
+            - name: smpp.server.name
+              value: "SMPP_SERVER_2"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smpp-server-3
+  labels:
+    app: smpp-server-3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smpp-server-3
+  template:
+    metadata:
+      labels:
+        app: smpp-server-3
+    spec:
+      containers:
+        - name: smpp-server-3
+          image: quarkus/smpp_server:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 2775
+              name: smpp
+          env:
+            - name: smpp.server.name
+              value: "SMPP_SERVER_3"
+---

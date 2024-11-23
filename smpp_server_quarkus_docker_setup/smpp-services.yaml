@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smpp-service-1
+spec:
+  selector:
+    app: smpp-server-1
+  ports:
+    - name: smpp
+      port: 2775
+      targetPort: 2775
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smpp-service-2
+spec:
+  selector:
+    app: smpp-server-2
+  ports:
+    - name: smpp
+      port: 2775
+      targetPort: 2775
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smpp-service-3
+spec:
+  selector:
+    app: smpp-server-3
+  ports:
+    - name: smpp
+      port: 2775
+      targetPort: 2775
+  type: ClusterIP
