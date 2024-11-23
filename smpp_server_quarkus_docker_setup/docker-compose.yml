@@ -1,16 +1,18 @@
 version: '3.8'
 
 services:
-  smpp-server:
-    image: quarkus/smpp_server_quarkus_docker_setup-jvm
+  smpp-server-1:
+    image: quarkus/smpp_server:latest
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
     ports:
       - "8080:8080"
       - "2775:2775"
-  smpp-server-1:
-    image: quarkus/smpp_server_quarkus_docker_setup-jvm
+    environment:
+      smpp.server.name: "SMMP_SERVER_1"
+  smpp-server-2:
+    image: quarkus/smpp_server:latest
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
@@ -18,7 +20,7 @@ services:
       - "8081:8080"
       - "2776:2775"
     environment:
-      smpp.server.name: "Test Server..."
+      smpp.server.name: "SMMP_SERVER_2"
 
 
     networks:

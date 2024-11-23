@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smpp-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: smpp-server
+  template:
+    metadata:
+      labels:
+        app: smpp-server
+    spec:
+      containers:
+        - name: smpp-server
+          image: quarkus/smpp_server_quarkus_docker_setup-jvm:latest
+          imagePullPolicy: Never    # This tells K8s to use local image
+          ports:
+            - containerPort: 2775
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

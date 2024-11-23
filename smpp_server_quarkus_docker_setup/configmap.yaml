@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smpp-server-config
+data:
+  application.properties: |
+    # Add your SMPP server configurations here
+    quarkus.http.port=2775

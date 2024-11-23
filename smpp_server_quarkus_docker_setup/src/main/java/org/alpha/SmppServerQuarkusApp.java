@@ -15,14 +15,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Executors;
+import jakarta.annotation.PreDestroy;
 
 @ApplicationScoped
 public class SmppServerQuarkusApp {
-
     private static final Logger logger = LoggerFactory.getLogger(SmppServerQuarkusApp.class);
 
     private DefaultSmppServer smppServer;
+
+    @ConfigProperty(name = "smpp.server.name", defaultValue = "Server-000")
+    String serverName;
 
     @ConfigProperty(name = "smpp.port", defaultValue = "2775")
     int port;
@@ -51,16 +56,19 @@ public class SmppServerQuarkusApp {
     @ConfigProperty(name = "smpp.jmx-enabled", defaultValue = "false")
     boolean jmxEnabled;
 
-
     public void onStart(@Observes StartupEvent event) {
         startServer();
+    }
+
+    @PreDestroy
+    public void onStop() {
+        stopServer();
     }
 
     public void startServer() {
         try {
             var executor = Executors.newVirtualThreadPerTaskExecutor();
 
-            // Configuration for SMPP server
             SmppServerConfiguration configuration = new SmppServerConfiguration();
             configuration.setPort(port);
             configuration.setMaxConnectionSize(maxConnectionSize);
@@ -71,13 +79,17 @@ public class SmppServerQuarkusApp {
             configuration.setNonBlockingSocketsEnabled(nonBlockingSocketsEnabled);
             configuration.setDefaultSessionCountersEnabled(sessionCountersEnabled);
             configuration.setJmxEnabled(jmxEnabled);
+            configuration.setSystemId(serverName);
 
-            smppServer = new DefaultSmppServer(configuration, new DefaultSmppServerHandler(), executor);
-            logger.info("Starting SMPP server on port {}...", port);
+            DefaultSmppServerHandler serverHandler = new DefaultSmppServerHandler(serverName);
+            smppServer = new DefaultSmppServer(configuration, serverHandler, executor);
+
+            logger.info("[{}] Starting SMPP server on port {}...", serverName, port);
             smppServer.start();
-            logger.info("SMPP server started successfully!");
+            logger.info("[{}] SMPP server started successfully!", serverName);
+
         } catch (Exception e) {
-            logger.error("Failed to start SMPP server", e);
+            logger.error("[{}] Failed to start SMPP server: {}", serverName, e.getMessage(), e);
         }
     }
 
@@ -85,39 +97,52 @@ public class SmppServerQuarkusApp {
         if (smppServer != null) {
             try {
                 smppServer.stop();
-                logger.info("SMPP server stopped.");
+                logger.info("[{}] SMPP server stopped", serverName);
             } catch (Exception e) {
-                logger.error("Error stopping SMPP server", e);
+                logger.error("[{}] Error stopping SMPP server: {}", serverName, e.getMessage(), e);
             }
         }
     }
 
     public static class DefaultSmppServerHandler implements SmppServerHandler {
+        private final String serverName;
+        private static final Logger logger = LoggerFactory.getLogger(DefaultSmppServerHandler.class);
+
+        public DefaultSmppServerHandler(String serverName) {
+            this.serverName = serverName;
+            logger.info("[{}] Initializing server handler", serverName);
+        }
+
         @Override
         public void sessionBindRequested(Long sessionId, SmppSessionConfiguration sessionConfiguration, BaseBind bindRequest) throws SmppProcessingException {
-            sessionConfiguration.setName("Application.SMPP." + sessionConfiguration.getSystemId());
+            sessionConfiguration.setName(serverName);
+            sessionConfiguration.setSystemId(serverName);
+            logger.info("[{}] Session bind requested for systemId: {}", serverName, sessionConfiguration.getSystemId());
         }
 
         @Override
         public void sessionCreated(Long sessionId, SmppServerSession session, BaseBindResp preparedBindResponse) throws SmppProcessingException {
-            logger.info("Session created: {}", session);
-            session.serverReady(new TestSmppSessionHandler(session));
+            logger.info("[{}] Session created with ID: {}", serverName, sessionId);
+            session.serverReady(new TestSmppSessionHandler(session, serverName));
         }
 
         @Override
         public void sessionDestroyed(Long sessionId, SmppServerSession session) {
-            logger.info("Session destroyed: {}", session);
+            logger.info("[{}] Session destroyed: {}", serverName, sessionId);
             session.destroy();
         }
     }
 
     public static class TestSmppSessionHandler extends DefaultSmppSessionHandler {
         private final WeakReference<SmppSession> sessionRef;
+        private final String serverName;
+        private static final Logger logger = LoggerFactory.getLogger(TestSmppSessionHandler.class);
 
-        private String serverName;
-
-        public TestSmppSessionHandler(SmppSession session) {
+        public TestSmppSessionHandler(SmppSession session, String serverName) {
+            super();
             this.sessionRef = new WeakReference<>(session);
+            this.serverName = serverName;
+            logger.info("[{}] Initializing session handler", serverName);
         }
 
         @Override
@@ -126,35 +151,41 @@ public class SmppServerQuarkusApp {
 
             if (pduRequest instanceof SubmitSm submitSm) {
                 String messageContent = CharsetUtil.decode(submitSm.getShortMessage(), CharsetUtil.CHARSET_ISO_8859_1);
-                logger.info("Message received from client: {}", messageContent);
+                logger.info("[{}] Received message: {}", serverName, messageContent);
 
                 if (session != null) {
                     try {
                         // Send initial response
+                        String responseMessage = String.format("%s: Bye, World", serverName);
                         DeliverSm deliver = new DeliverSm();
-                        deliver.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, "40404"));
+                        deliver.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, serverName));
                         deliver.setDestAddress(new Address((byte) 0x01, (byte) 0x01, "44555519205"));
-                        deliver.setShortMessage(CharsetUtil.encode("Server-1 : Bye , World", CharsetUtil.CHARSET_ISO_8859_1));
+                        deliver.setShortMessage(CharsetUtil.encode(responseMessage, CharsetUtil.CHARSET_ISO_8859_1));
+
                         session.sendRequestPdu(deliver, 10000, false);
-                        logger.info( serverName +": Response sent to client: Bye , World");
+                        logger.info("[{}] Sent response: {}", serverName, responseMessage);
 
-                        // Send Delivery Report (DLR)
+                        // Send DLR
+                        String dlrMessage = String.format("id:%s-%d sub:001 dlvrd:001 submit date:%s done date:%s stat:DELIVRD err:000",
+                                serverName,
+                                System.currentTimeMillis() % 10000,
+                                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMdd")),
+                                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMdd")));
+
                         DeliverSm dlr = new DeliverSm();
-                        dlr.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, "40404"));
+                        dlr.setSourceAddress(new Address((byte) 0x03, (byte) 0x00, serverName));
                         dlr.setDestAddress(new Address((byte) 0x01, (byte) 0x01, "44555519205"));
-
-                        // Construct DLR message with status
-                        String dlrMessage = "id:12345 sub:001 dlvrd:001 submit date:230101 done date:230101 stat:DELIVRD err:000";
                         dlr.setShortMessage(CharsetUtil.encode(dlrMessage, CharsetUtil.CHARSET_ISO_8859_1));
-
-                        // Set additional PDU parameters to indicate it's a delivery report
-                        dlr.setEsmClass((byte) (0x04 | 0x00)); // Set the esm_class to indicate delivery receipt
+                        dlr.setEsmClass((byte) (0x04 | 0x00));
 
                         session.sendRequestPdu(dlr, 10000, false);
-                        logger.info("Server-1: Delivery Report sent to client");
+                        logger.info("[{}] Sent delivery report: {}", serverName, dlrMessage);
+
                     } catch (Exception e) {
-                        logger.error("Error sending response to client", e);
+                        logger.error("[{}] Error processing message: {}", serverName, e.getMessage(), e);
                     }
+                } else {
+                    logger.warn("[{}] Cannot process message - session is null", serverName);
                 }
             }
 
