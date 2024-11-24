@@ -4,10 +4,11 @@
 This repository contains a two-way SMS solution, implemented using two main modules: **smpp_load_balancer** and **smpp_server_quarkus_docker_setup**. These modules leverage **Quarkus**, a Kubernetes-native Java framework designed for cloud-native applications.
 
 ---
-
----
+> **Note**:There are 2 different branches  **smpp_quarkus_docker** and **smpp_load_balancer**  you can check out, all code in 2 branch
 
 ## Modules Overview
+
+
 
 ### **1. smpp_load_balancer**
 The **smpp_load_balancer** module is designed to distribute SMS message traffic efficiently across multiple SMPP connections. It utilizes **Quarkus's reactive capabilities** and integrates with PostgreSQL for persistence.
@@ -17,7 +18,7 @@ The **smpp_load_balancer** module is designed to distribute SMS message traffic 
 - **RESTful API**: Provides endpoints for managing and monitoring SMPP connections.
 - **PostgreSQL Integration**: Ensures data persistence for server configurations.
 - **Scheduled Tasks**: Leverages the Quarkus Scheduler for periodic jobs.
-### Prerequisites
+### Prerequisites for Load Balancer
 - **Java 17+**
 - **Maven 3.6+**
 - **Docker**
@@ -43,7 +44,7 @@ loadbalancer.port=3000
 
 ### Running the Load Balancer
 
-Note: Make you are in write directory
+> **Note**:Make sure you are in the right module directory in which load balancer present.
 ```bash
 cd smpp_load_balncer
 ```
@@ -91,7 +92,7 @@ quarkus.hibernate-orm.log.sql=true
 # Load balancer port
 loadbalancer.port=3000
 ```
-
+Node : YOU DONT NEED CREATE TABLE HIBERNATE WILL AUTO CREATE, it's just for understanding
 ### Database Schema: `smpp_servers`
 
 The load balancer relies on a database to manage SMPP server configurations, including details like host, port, and priority.
@@ -111,25 +112,30 @@ CREATE TABLE smpp_servers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Function to update the 'updated_at' column
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- i.e Servers
+INSERT INTO public.smpp_servers
+(id, host, "password", port, priority, region, status, system_id)
+VALUES(0, 'smpp-server-1', 'test', 2775, 1, 'Pakistan', true, '01' );
 
--- Trigger for 'updated_at' column
-CREATE TRIGGER set_updated_at
-BEFORE UPDATE ON smpp_servers
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+INSERT INTO public.smpp_servers
+   (id, host, "password", port, priority, region, status, system_id)
+VALUES(1, 'smpp-server-2', 'test', 2776, 1, 'Pakistan', true, '01' );
+
+
+INSERT INTO public.smpp_servers
+   (id, host, "password", port, priority, region, status, system_id)
+VALUES(3, 'smpp-server-3', 'test', 2778, 1, 'India', true, '01' );
+```
+### Test the Load Balancer is Working
+> Use the Telnet to connect the LB
+```bash
+telnet localhost <lb_port>
+
+```
+Or
+
+```bash
+nc localhost <lb_port>
 ```
 
----
-### Prerequisites
-- **Java 11+**
-- **Maven 3.6+**
-- **Docker**
-- **PostgreSQL**
+
