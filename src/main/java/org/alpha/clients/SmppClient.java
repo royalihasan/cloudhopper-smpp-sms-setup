@@ -45,7 +45,7 @@ public class SmppClient {
         config.setName("client.alpha.000");  // Client name for identification
         config.setType(SmppBindType.TRANSCEIVER);  // Set the bind type (transceiver)
         config.setHost(PropertiesLoader.properties.clientHost);  // SMPP server host
-        config.setPort(2775);  // SMPP server port
+        config.setPort(3000);  // SMPP server port
         config.setConnectTimeout(PropertiesLoader.properties.clientConnectTimeout);  // Connection timeout
         config.setSystemId(PropertiesLoader.properties.clientSystemId);  // System ID for authentication
         config.setPassword(PropertiesLoader.properties.clientPassword);  // Password for authentication

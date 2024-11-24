@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 
 public class BatchSmppClient {
     private static final Logger logger = LoggerFactory.getLogger(BatchSmppClient.class);
-    private static final int BATCH_SIZE = 1000; // Number of messages to send in a batch
+    private static final int BATCH_SIZE = 100; // Number of messages to send in a batch
     private static final int CONCURRENT_REQUESTS = 100; // Number of concurrent requests to handle
     private static final int REQUEST_TIMEOUT = 100000; // Timeout for each message submission (in milliseconds)
     private static final int MAX_SHORT_MESSAGE_LENGTH = 255; // Maximum length for a short message in SMPP
@@ -72,7 +72,7 @@ public class BatchSmppClient {
         config.setName("batch.client.alpha"); // Name for the client
         config.setType(SmppBindType.TRANSCEIVER); // Bind type (bi-directional communication)
         config.setHost(PropertiesLoader.properties.clientHost); // SMPP server host
-        config.setPort(PropertiesLoader.properties.clientPort); // SMPP server port
+        config.setPort(2775); // SMPP server port
         config.setConnectTimeout(PropertiesLoader.properties.clientConnectTimeout); // Connection timeout
         config.setSystemId(PropertiesLoader.properties.clientSystemId); // System ID for SMPP session
         config.setPassword(PropertiesLoader.properties.clientPassword); // Password for SMPP session

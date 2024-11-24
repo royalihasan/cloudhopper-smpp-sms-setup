@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # SMPP Server 1
+  smpp-server-1:
+    image: quarkus/smpp_server:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    ports:
+      - "2775:2775"
+    environment:
+      smpp.server.name: "SMMP_SERVER_1"
+    networks:
+      - smpp-network
+
+  # SMPP Server 2
+  smpp-server-2:
+    image: quarkus/smpp_server:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    ports:
+      - "2776:2775"
+    environment:
+      smpp.server.name: "SMMP_SERVER_2"
+    networks:
+      - smpp-network
+  smpp-server-3:
+    image: quarkus/smpp_server:latest
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    ports:
+      - "2778:2775"
+    environment:
+      smpp.server.name: "SMMP_SERVER_3"
+    networks:
+      - smpp-network
+  # SMPP Load Balancer
+  smpp-load-balancer:
+    image: quarkus/smpp_load_balancer
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: smpp-load-balancer
+    ports:
+      - "3000:3000"  # Exposing the load balancer port for access
+    environment:
+      - QUARKUS_PROFILE=dev
+      - QUARKUS_DATASOURCE_URL=jdbc:postgresql://smpp-db:5432/smpp_server  # Use service name of the DB container
+      - QUARKUS_DATASOURCE_USERNAME=smpp_admin
+      - QUARKUS_DATASOURCE_PASSWORD=smpp_password
+      - LOADBALANCER_PORT=3000
+    depends_on:
+      - smpp-db  # Ensure that the database starts first
+    networks:
+      - smpp-network
+
+  # PostgreSQL Database
+  smpp-db:
+    image: postgres:latest
+    container_name: smpp-db
+    environment:
+      POSTGRES_USER: smpp_admin
+      POSTGRES_PASSWORD: smpp_password
+      POSTGRES_DB: smpp_server
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port to the host
+    volumes:
+      - smpp_db_data:/var/lib/postgresql/data  # Persists database data
+    networks:
+      - smpp-network
+
+# Define the shared network
+networks:
+  smpp-network:
+    driver: bridge
+
+# Define the volume for PostgreSQL data persistence
+volumes:
+  smpp_db_data:  # Persists PostgreSQL data between container restarts

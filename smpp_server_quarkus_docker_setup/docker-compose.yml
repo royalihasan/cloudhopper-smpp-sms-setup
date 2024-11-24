@@ -7,7 +7,6 @@ services:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
     ports:
-      - "8080:8080"
       - "2775:2775"
     environment:
       smpp.server.name: "SMMP_SERVER_1"
