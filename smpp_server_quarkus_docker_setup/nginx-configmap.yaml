@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+    stream {
+      upstream smpp_backend {
+        least_conn;
+        server smpp-service-1:2775;
+        server smpp-service-2:2775;
+        server smpp-service-3:2775;
+      }
+
+      server {
+        listen 2775;
+        proxy_pass smpp_backend;
+      }
+    }
